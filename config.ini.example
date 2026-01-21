@@ -1,0 +1,13 @@
+; RDTrackingSystem 配置文件示例
+; 复制此文件为 config.ini 并修改配置值
+; 修改此文件后需要重启程序才能生效
+
+[Database]
+; 数据库文件路径（可以是相对路径或绝对路径）
+; 相对路径相对于程序运行目录
+; 示例: Data\rdtracking_v2.db 或 C:\MyApp\Data\rdtracking_v2.db
+Path=Data\rdtracking_v2.db
+
+[Logging]
+; 日志级别: Debug, Info, Warning, Error
+Level=Info
