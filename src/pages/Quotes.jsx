@@ -4,6 +4,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Grid, List, RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { quotesApi } from '@/lib/api';
+import { useI18n } from '@/i18n/I18nContext';
 
 // 简单的随机数生成器
 class Random {
@@ -27,6 +28,7 @@ class Random {
 
 const Quotes = () => {
   const { toast } = useToast();
+  const { t } = useI18n();
   const [quotes, setQuotes] = useState([]);
   const [displayedQuotes, setDisplayedQuotes] = useState([]);
   const [viewMode, setViewMode] = useState('bubble'); // bubble 或 list
@@ -375,7 +377,7 @@ const Quotes = () => {
               className={viewMode === 'bubble' ? 'bg-indigo-600 hover:bg-indigo-700' : ''}
             >
               <Grid className="w-4 h-4 mr-2" />
-              气泡视图
+              {t('quotes.bubbleView')}
             </Button>
             <Button
               variant={viewMode === 'list' ? 'default' : 'outline'}
@@ -383,7 +385,7 @@ const Quotes = () => {
               className={viewMode === 'list' ? 'bg-indigo-600 hover:bg-indigo-700' : ''}
             >
               <List className="w-4 h-4 mr-2" />
-              列表视图
+              {t('quotes.listView')}
             </Button>
             <Button
               variant="outline"
@@ -396,7 +398,7 @@ const Quotes = () => {
               }}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              刷新
+              {t('quotes.refresh')}
             </Button>
           </div>
         </div>
@@ -583,14 +585,14 @@ const Quotes = () => {
               })}
               </AnimatePresence>
             </div>
-            {displayedQuotes.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-                <div className="text-center">
-                  <Sparkles className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-                  <p>暂无名言，请先添加名言数据</p>
-                </div>
-              </div>
-            )}
+                  {displayedQuotes.length === 0 && (
+                    <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+                      <div className="text-center">
+                        <Sparkles className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+                        <p>{t('quotes.noQuotes')}</p>
+                      </div>
+                    </div>
+                  )}
           </div>
         ) : (
           /* 列表视图 */
@@ -618,10 +620,10 @@ const Quotes = () => {
                 </motion.div>
               ))}
             </div>
-            {quotes.length === 0 && (
+            {quotes.length === 0 && (              
               <div className="text-center py-12 text-gray-500">
                 <Sparkles className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-                <p>暂无名言，请先添加名言数据</p>
+                <p>{t('quotes.noQuotes')}</p>
               </div>
             )}
           </div>

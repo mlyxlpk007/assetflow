@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
-import { Package, LayoutGrid, Folder, Users as UsersIcon, User, Settings, BarChart2, Bell, Database, ListChecks, BookOpen, Archive, Sparkles } from 'lucide-react';
+import { Package, LayoutGrid, Folder, Users as UsersIcon, User, Settings, BarChart2, Bell, Database, ListChecks, BookOpen, Archive, Sparkles, ShoppingBag } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
+import SettingsModal from './SettingsModal';
+import { useI18n } from '@/i18n/I18nContext';
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { t, language } = useI18n();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [appInfo, setAppInfo] = useState({ version: '加载中...', buildTime: '加载中...' });
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [appInfo, setAppInfo] = useState({ version: t('common.loading'), buildTime: t('common.loading') });
   
   useEffect(() => {
     const loadAppInfo = async () => {
@@ -26,8 +30,8 @@ const Sidebar = () => {
           if (info && !info.error) {
             // 显示 C# 后端程序的版本和编译时间
             setAppInfo({
-              version: info.version || '未知',
-              buildTime: info.buildTime || '未知',
+              version: info.version || t('common.unknown'),
+              buildTime: info.buildTime || t('common.unknown'),
               appName: info.appName || 'RDTrackingSystem',
               appType: info.appType || 'C# WinForms + WebView2'
             });
@@ -37,47 +41,47 @@ const Sidebar = () => {
               appName: info.appName,
               appType: info.appType
             });
+            } else {
+              console.warn('[Sidebar] 版本信息包含错误:', info?.error);
+              setAppInfo({ version: t('common.unknown'), buildTime: t('common.unknown') });
+            }
           } else {
-            console.warn('[Sidebar] 版本信息包含错误:', info?.error);
-            setAppInfo({ version: '未知', buildTime: '未知' });
+            console.warn('[Sidebar] 无法访问原生桥接，版本信息将显示为未知');
+            setAppInfo({ version: t('common.unknown'), buildTime: t('common.unknown') });
           }
-        } else {
-          console.warn('[Sidebar] 无法访问原生桥接，版本信息将显示为未知');
-          setAppInfo({ version: '未知', buildTime: '未知' });
+        } catch (error) {
+          console.error('[Sidebar] 加载 C# 后端版本信息失败:', error);
+          setAppInfo({ version: t('common.unknown'), buildTime: t('common.unknown') });
         }
-      } catch (error) {
-        console.error('[Sidebar] 加载 C# 后端版本信息失败:', error);
-        setAppInfo({ version: '未知', buildTime: '未知' });
-      }
-    };
-    
-    loadAppInfo();
-  }, []);
+      };
+      
+      loadAppInfo();
+    }, [t]);
 
   const showToast = () => {
     toast({
-      title: '🚧 功能尚未实现',
-      description: '别担心！您可以在下一次提示中请求它！🚀',
+      title: '🚧 ' + t('common.warning'),
+      description: t('common.featureNotImplemented'),
     });
   };
 
   const navItems = [
-    { icon: LayoutGrid, label: '仪表盘', path: '/' },
-    { icon: Folder, label: '项目', path: '/projects' },
-    { icon: ListChecks, label: '任务', path: '/tasks' },
-    { icon: UsersIcon, label: '人力', path: '/human-resources' },
-    { icon: User, label: '用户', path: '/users' },
-    { icon: BookOpen, label: '经验教训库', path: '/lesson-learned' },
-    { icon: Archive, label: '资产管理', path: '/assets' },
-    { icon: Sparkles, label: '管理泡泡', path: '/quotes' },
-    { icon: Database, label: '数据管理', path: '/data-management' },
-    { icon: Settings, label: '数据测试', path: '/test-data' },
+    { icon: LayoutGrid, label: t('nav.dashboard'), path: '/' },
+    { icon: Folder, label: t('nav.projects'), path: '/projects' },
+    { icon: ListChecks, label: t('nav.tasks'), path: '/tasks' },
+    { icon: ShoppingBag, label: t('nav.productManagement'), path: '/products' },
+    { icon: Archive, label: t('nav.assetManagement'), path: '/assets' },
+    { icon: UsersIcon, label: t('nav.humanResources'), path: '/human-resources' },
+    { icon: BookOpen, label: t('nav.lessonLearned'), path: '/lesson-learned' },
+    { icon: Sparkles, label: t('nav.managementBubbles'), path: '/quotes' },
+    { icon: User, label: t('nav.users'), path: '/users' },
+    { icon: Database, label: t('nav.dataManagement'), path: '/data-management' },
+    { icon: Settings, label: t('nav.dataTest'), path: '/test-data' },
   ];
 
   const reportItems = [
-    { icon: BarChart2, label: '报告', action: showToast },
-    { icon: Bell, label: '通知', action: () => setIsNotificationOpen(true) },
-    { icon: Settings, label: '设置', action: showToast },
+    { icon: BarChart2, label: t('nav.reports'), action: showToast },
+    { icon: Settings, label: t('nav.settings'), action: () => setIsSettingsOpen(true) },
   ];
 
   const handleNavClick = (item) => {
@@ -94,8 +98,9 @@ const Sidebar = () => {
         <div className="bg-indigo-600 p-2 rounded-lg">
           <Package size={24} className="text-white" />
         </div>
-        <h1 className="text-xl font-bold text-white">研发跟踪</h1>
+        <h1 className="text-xl font-bold text-white">R&D Tracking</h1>
       </div>
+      
       <nav className="flex-grow">
         <ul>
           {navItems.map(item => (
@@ -121,10 +126,10 @@ const Sidebar = () => {
         {/* 版本信息 - 显示 C# 后端程序的版本和编译时间 */}
         <div className="mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500">
           <div className="px-4 py-2">
-            <div className="font-medium text-gray-400 mb-1">后端版本信息</div>
+            <div className="font-medium text-gray-400 mb-1">{language === 'zh-CN' ? '后端版本信息' : 'Backend Version'}</div>
             <div className="space-y-1">
-              <div>版本: <span className="text-gray-300">{appInfo.version}</span></div>
-              <div>编译时间: <span className="text-gray-300">{appInfo.buildTime}</span></div>
+              <div>{language === 'zh-CN' ? '版本' : 'Version'}: <span className="text-gray-300">{appInfo.version}</span></div>
+              <div>{language === 'zh-CN' ? '编译时间' : 'Build Time'}: <span className="text-gray-300">{appInfo.buildTime}</span></div>
               {appInfo.appName && (
                 <div className="text-gray-600 mt-1">({appInfo.appName})</div>
               )}
@@ -136,6 +141,11 @@ const Sidebar = () => {
       <NotificationCenter
         isOpen={isNotificationOpen}
         onClose={() => setIsNotificationOpen(false)}
+      />
+      
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
     </aside>
   );

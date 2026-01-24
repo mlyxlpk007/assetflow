@@ -3985,4 +3985,1011 @@ public class WebViewBridge
             });
         }
     }
+
+    // ========== 产品 API ==========
+    public string GetProducts()
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo("GetProducts() 开始执行", "WebViewBridge");
+        
+        try
+        {
+            if (_context == null)
+            {
+                return JsonConvert.SerializeObject(new List<object>(), new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
+            }
+
+            DatabaseSchemaMigrator.MigrateSchema();
+
+            var products = _context.Products
+                .Include(p => p.Modules)
+                .Include(p => p.Versions)
+                .OrderByDescending(p => p.UpdatedAt)
+                .ToList();
+
+            var result = products.Select(p => new
+            {
+                id = p.Id,
+                name = p.Name,
+                code = p.Code,
+                description = p.Description,
+                currentVersion = p.CurrentVersion,
+                status = p.Status,
+                createdAt = p.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                updatedAt = p.UpdatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                moduleCount = p.Modules.Count,
+                versionCount = p.Versions.Count
+            }).ToList();
+
+            return JsonConvert.SerializeObject(result, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"获取产品列表失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string GetProduct(string id)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"GetProduct() 开始执行，ID: {id}", "WebViewBridge");
+        
+        try
+        {
+            if (_context == null)
+            {
+                return JsonConvert.SerializeObject(new { error = "数据库上下文为空" }, new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
+            }
+
+            DatabaseSchemaMigrator.MigrateSchema();
+
+            var product = _context.Products
+                .Include(p => p.Modules.OrderBy(m => m.OrderIndex))
+                    .ThenInclude(m => m.SubModules.OrderBy(sm => sm.OrderIndex))
+                        .ThenInclude(sm => sm.Functions.OrderBy(f => f.OrderIndex))
+                            .ThenInclude(f => f.Assets)
+                .Include(p => p.Modules)
+                    .ThenInclude(m => m.SubModules)
+                        .ThenInclude(sm => sm.Functions)
+                            .ThenInclude(f => f.Engineers)
+                .Include(p => p.Modules)
+                    .ThenInclude(m => m.SubModules)
+                        .ThenInclude(sm => sm.Functions)
+                            .ThenInclude(f => f.Customers)
+                .Include(p => p.Modules)
+                    .ThenInclude(m => m.SubModules)
+                        .ThenInclude(sm => sm.Functions)
+                            .ThenInclude(f => f.Tasks)
+                .Include(p => p.Versions.OrderByDescending(v => v.CreatedAt))
+                .FirstOrDefault(p => p.Id == id);
+
+            if (product == null)
+            {
+                return JsonConvert.SerializeObject(new { error = "产品不存在" }, new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
+            }
+
+            var result = new
+            {
+                id = product.Id,
+                name = product.Name,
+                code = product.Code,
+                description = product.Description,
+                currentVersion = product.CurrentVersion,
+                status = product.Status,
+                createdAt = product.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                updatedAt = product.UpdatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                modules = product.Modules.Select(m => new
+                {
+                    id = m.Id,
+                    name = m.Name,
+                    type = m.Type,
+                    description = m.Description,
+                    orderIndex = m.OrderIndex,
+                    subModules = m.SubModules.Select(sm => new
+                    {
+                        id = sm.Id,
+                        name = sm.Name,
+                        description = sm.Description,
+                        orderIndex = sm.OrderIndex,
+                        functions = sm.Functions.Select(f => new
+                        {
+                            id = f.Id,
+                            name = f.Name,
+                            description = f.Description,
+                            orderIndex = f.OrderIndex,
+                            assets = f.Assets.Select(a => new
+                            {
+                                id = a.Id,
+                                assetId = a.AssetId,
+                                assetVersion = a.AssetVersion
+                            }).ToList(),
+                            engineers = f.Engineers.Select(e => new
+                            {
+                                id = e.Id,
+                                engineerId = e.EngineerId
+                            }).ToList(),
+                            customers = f.Customers.Select(c => new
+                            {
+                                id = c.Id,
+                                customerName = c.CustomerName,
+                                region = c.Region
+                            }).ToList(),
+                            tasks = f.Tasks.Select(t => new
+                            {
+                                id = t.Id,
+                                taskId = t.TaskId
+                            }).ToList()
+                        }).ToList()
+                    }).ToList()
+                }).ToList(),
+                versions = product.Versions.Select(v => new
+                {
+                    id = v.Id,
+                    version = v.Version,
+                    description = v.Description,
+                    status = v.Status,
+                    releaseDate = v.ReleaseDate?.ToString("yyyy-MM-dd"),
+                    createdAt = v.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
+                }).ToList()
+            };
+
+            return JsonConvert.SerializeObject(result, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"获取产品详情失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string GetProductsStructure()
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo("GetProductsStructure() 开始执行", "WebViewBridge");
+        
+        try
+        {
+            if (_context == null)
+            {
+                return JsonConvert.SerializeObject(new List<object>(), new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
+            }
+
+            DatabaseSchemaMigrator.MigrateSchema();
+
+            var products = _context.Products
+                .Include(p => p.Modules.OrderBy(m => m.OrderIndex))
+                    .ThenInclude(m => m.SubModules.OrderBy(sm => sm.OrderIndex))
+                        .ThenInclude(sm => sm.Functions.OrderBy(f => f.OrderIndex))
+                            .ThenInclude(f => f.Assets)
+                .Include(p => p.Modules)
+                    .ThenInclude(m => m.SubModules)
+                        .ThenInclude(sm => sm.Functions)
+                            .ThenInclude(f => f.Engineers)
+                .Include(p => p.Modules)
+                    .ThenInclude(m => m.SubModules)
+                        .ThenInclude(sm => sm.Functions)
+                            .ThenInclude(f => f.Customers)
+                .Include(p => p.Modules)
+                    .ThenInclude(m => m.SubModules)
+                        .ThenInclude(sm => sm.Functions)
+                            .ThenInclude(f => f.Tasks)
+                .OrderByDescending(p => p.UpdatedAt)
+                .ToList();
+
+            var result = products.Select(p => new
+            {
+                id = p.Id,
+                name = p.Name,
+                code = p.Code,
+                modules = p.Modules.Select(m => new
+                {
+                    id = m.Id,
+                    name = m.Name,
+                    type = m.Type,
+                    subModules = m.SubModules.Select(sm => new
+                    {
+                        id = sm.Id,
+                        name = sm.Name,
+                        functions = sm.Functions.Select(f => new
+                        {
+                            id = f.Id,
+                            name = f.Name,
+                            assets = f.Assets.Select(a => new
+                            {
+                                id = a.Id,
+                                assetId = a.AssetId,
+                                assetVersion = a.AssetVersion
+                            }).ToList(),
+                            engineers = f.Engineers.Select(e => new
+                            {
+                                id = e.Id,
+                                engineerId = e.EngineerId
+                            }).ToList(),
+                            customers = f.Customers.Select(c => new
+                            {
+                                id = c.Id,
+                                customerName = c.CustomerName,
+                                region = c.Region
+                            }).ToList(),
+                            tasks = f.Tasks.Select(t => new
+                            {
+                                id = t.Id,
+                                taskId = t.TaskId
+                            }).ToList()
+                        }).ToList()
+                    }).ToList()
+                }).ToList()
+            }).ToList();
+
+            return JsonConvert.SerializeObject(result, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"获取产品结构失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string CreateProduct(string productDataJson)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo("CreateProduct() 开始执行", "WebViewBridge");
+        
+        try
+        {
+            if (_context == null)
+            {
+                return JsonConvert.SerializeObject(new { error = "数据库上下文为空" }, new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
+            }
+
+            DatabaseSchemaMigrator.MigrateSchema();
+
+            var productData = JsonConvert.DeserializeObject<dynamic>(productDataJson);
+            if (productData == null)
+            {
+                return JsonConvert.SerializeObject(new { error = "产品数据为空" }, new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
+            }
+
+            var product = new Product
+            {
+                Id = Guid.NewGuid().ToString(),
+                Name = productData.name?.ToString() ?? string.Empty,
+                Code = productData.code?.ToString() ?? string.Empty,
+                Description = productData.description?.ToString(),
+                CurrentVersion = productData.currentVersion?.ToString(),
+                Status = productData.status?.ToString() ?? "active",
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
+
+            _context.Products.Add(product);
+            _context.SaveChanges();
+
+            return JsonConvert.SerializeObject(new { id = product.Id, message = "产品创建成功" }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"创建产品失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string GetProductVersions()
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo("GetProductVersions() 开始执行", "WebViewBridge");
+        
+        try
+        {
+            if (_context == null)
+            {
+                return JsonConvert.SerializeObject(new List<object>(), new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
+            }
+
+            DatabaseSchemaMigrator.MigrateSchema();
+
+            var versions = _context.ProductVersions
+                .Include(v => v.Product)
+                .OrderByDescending(v => v.CreatedAt)
+                .ToList();
+
+            var result = versions.Select(v => new
+            {
+                id = v.Id,
+                productId = v.ProductId,
+                productName = v.Product?.Name,
+                productCode = v.Product?.Code,
+                version = v.Version,
+                description = v.Description,
+                status = v.Status,
+                releaseDate = v.ReleaseDate?.ToString("yyyy-MM-dd"),
+                createdAt = v.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
+            }).ToList();
+
+            return JsonConvert.SerializeObject(result, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"获取产品版本列表失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string UpdateProduct(string id, string productDataJson)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"UpdateProduct() 开始执行，ID: {id}", "WebViewBridge");
+        
+        try
+        {
+            if (_context == null)
+            {
+                return JsonConvert.SerializeObject(new { error = "数据库上下文为空" }, new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
+            }
+
+            DatabaseSchemaMigrator.MigrateSchema();
+
+            var product = _context.Products.Find(id);
+            if (product == null)
+            {
+                return JsonConvert.SerializeObject(new { error = "产品不存在" }, new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
+            }
+
+            var productData = JsonConvert.DeserializeObject<dynamic>(productDataJson);
+            if (productData == null)
+            {
+                return JsonConvert.SerializeObject(new { error = "产品数据为空" }, new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
+            }
+
+            product.Name = productData.name?.ToString() ?? product.Name;
+            product.Code = productData.code?.ToString() ?? product.Code;
+            product.Description = productData.description?.ToString();
+            product.CurrentVersion = productData.currentVersion?.ToString();
+            product.Status = productData.status?.ToString() ?? product.Status;
+            product.UpdatedAt = DateTime.Now;
+
+            _context.SaveChanges();
+
+            return JsonConvert.SerializeObject(new { message = "产品更新成功" }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"更新产品失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string DeleteProduct(string id)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"DeleteProduct() 开始执行，ID: {id}", "WebViewBridge");
+        
+        try
+        {
+            if (_context == null)
+            {
+                return JsonConvert.SerializeObject(new { error = "数据库上下文为空" }, new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
+            }
+
+            DatabaseSchemaMigrator.MigrateSchema();
+
+            var product = _context.Products.Find(id);
+            if (product == null)
+            {
+                return JsonConvert.SerializeObject(new { error = "产品不存在" }, new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
+            }
+
+            _context.Products.Remove(product);
+            _context.SaveChanges();
+
+            return JsonConvert.SerializeObject(new { message = "产品已删除" }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"删除产品失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string GetProductAnalytics()
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo("GetProductAnalytics() 开始执行", "WebViewBridge");
+        
+        try
+        {
+            if (_context == null)
+            {
+                return JsonConvert.SerializeObject(new { error = "数据库上下文为空" }, new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                });
+            }
+
+            DatabaseSchemaMigrator.MigrateSchema();
+
+            var totalProducts = _context.Products.Count();
+            var activeVersions = _context.ProductVersions
+                .Where(v => v.Status == "stable" || v.Status == "beta")
+                .Count();
+            var totalReleases = _context.ProductVersions.Count();
+            
+            var relatedProjectIds = _context.ProductFunctionTasks
+                .Join(_context.Tasks, pft => pft.TaskId, t => t.Id, (pft, t) => t.ProjectId)
+                .Distinct()
+                .Count();
+
+            var result = new
+            {
+                totalProducts,
+                activeVersions,
+                totalReleases,
+                relatedProjects = relatedProjectIds
+            };
+
+            return JsonConvert.SerializeObject(result, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"获取产品分析数据失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    // ========== 产品结构管理 API ==========
+    private ILogger<Controllers.ProductsController> GetProductsControllerLogger()
+    {
+        return Microsoft.Extensions.Logging.Abstractions.NullLogger<Controllers.ProductsController>.Instance;
+    }
+
+    private object? GetActionResultValue(Microsoft.AspNetCore.Mvc.ActionResult<object> result)
+    {
+        if (result.Result != null)
+        {
+            if (result.Result is Microsoft.AspNetCore.Mvc.ObjectResult objectResult)
+            {
+                return objectResult.Value;
+            }
+            if (result.Result is Microsoft.AspNetCore.Mvc.OkObjectResult okResult)
+            {
+                return okResult.Value;
+            }
+            if (result.Result is Microsoft.AspNetCore.Mvc.NotFoundObjectResult notFoundResult)
+            {
+                return notFoundResult.Value;
+            }
+            if (result.Result is Microsoft.AspNetCore.Mvc.BadRequestObjectResult badRequestResult)
+            {
+                return badRequestResult.Value;
+            }
+            // 对于其他类型的 ActionResult，返回 null 或错误信息
+            return new { error = "Unknown result type" };
+        }
+        return result.Value;
+    }
+
+    private object? GetActionResultValue(Microsoft.AspNetCore.Mvc.ActionResult result)
+    {
+        if (result is Microsoft.AspNetCore.Mvc.ObjectResult objectResult)
+        {
+            return objectResult.Value;
+        }
+        if (result is Microsoft.AspNetCore.Mvc.OkObjectResult okResult)
+        {
+            return okResult.Value;
+        }
+        if (result is Microsoft.AspNetCore.Mvc.NotFoundObjectResult notFoundResult)
+        {
+            return notFoundResult.Value;
+        }
+        if (result is Microsoft.AspNetCore.Mvc.BadRequestObjectResult badRequestResult)
+        {
+            return badRequestResult.Value;
+        }
+        // 对于其他类型的 ActionResult，返回 null 或错误信息
+        return new { error = "Unknown result type" };
+    }
+
+    public string CreateProductModule(string productId, string moduleDataJson)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"CreateProductModule() 开始执行，ProductID: {productId}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var moduleData = JsonConvert.DeserializeObject(moduleDataJson);
+            var result = controller.CreateModule(productId, moduleData).Result;
+            var value = GetActionResultValue(result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"创建模块失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string UpdateProductModule(string id, string moduleDataJson)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"UpdateProductModule() 开始执行，ID: {id}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var moduleData = JsonConvert.DeserializeObject(moduleDataJson);
+            var result = controller.UpdateModule(id, moduleData).Result;
+            var value = GetActionResultValue((Microsoft.AspNetCore.Mvc.ActionResult)result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"更新模块失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string DeleteProductModule(string id)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"DeleteProductModule() 开始执行，ID: {id}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var result = controller.DeleteModule(id).Result;
+            var value = GetActionResultValue((Microsoft.AspNetCore.Mvc.ActionResult)result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"删除模块失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string CreateProductSubModule(string moduleId, string subModuleDataJson)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"CreateProductSubModule() 开始执行，ModuleID: {moduleId}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var subModuleData = JsonConvert.DeserializeObject(subModuleDataJson);
+            var result = controller.CreateSubModule(moduleId, subModuleData).Result;
+            var value = GetActionResultValue(result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"创建子模块失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string UpdateProductSubModule(string id, string subModuleDataJson)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"UpdateProductSubModule() 开始执行，ID: {id}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var subModuleData = JsonConvert.DeserializeObject(subModuleDataJson);
+            var result = controller.UpdateSubModule(id, subModuleData).Result;
+            var value = GetActionResultValue((Microsoft.AspNetCore.Mvc.ActionResult)result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"更新子模块失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string DeleteProductSubModule(string id)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"DeleteProductSubModule() 开始执行，ID: {id}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var result = controller.DeleteSubModule(id).Result;
+            var value = GetActionResultValue((Microsoft.AspNetCore.Mvc.ActionResult)result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"删除子模块失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string CreateProductFunction(string subModuleId, string functionDataJson)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"CreateProductFunction() 开始执行，SubModuleID: {subModuleId}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var functionData = JsonConvert.DeserializeObject(functionDataJson);
+            var result = controller.CreateFunction(subModuleId, functionData).Result;
+            var value = GetActionResultValue(result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"创建功能失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string UpdateProductFunction(string id, string functionDataJson)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"UpdateProductFunction() 开始执行，ID: {id}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var functionData = JsonConvert.DeserializeObject(functionDataJson);
+            var result = controller.UpdateFunction(id, functionData).Result;
+            var value = GetActionResultValue((Microsoft.AspNetCore.Mvc.ActionResult)result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"更新功能失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string DeleteProductFunction(string id)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"DeleteProductFunction() 开始执行，ID: {id}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var result = controller.DeleteFunction(id).Result;
+            var value = GetActionResultValue((Microsoft.AspNetCore.Mvc.ActionResult)result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"删除功能失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string AddFunctionAsset(string functionId, string assetDataJson)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"AddFunctionAsset() 开始执行，FunctionID: {functionId}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var assetData = JsonConvert.DeserializeObject(assetDataJson);
+            var result = controller.AddFunctionAsset(functionId, assetData).Result;
+            var value = GetActionResultValue(result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"添加资产关联失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string RemoveFunctionAsset(string functionId, string assetId)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"RemoveFunctionAsset() 开始执行，FunctionID: {functionId}, AssetID: {assetId}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var result = controller.RemoveFunctionAsset(functionId, assetId).Result;
+            var value = GetActionResultValue((Microsoft.AspNetCore.Mvc.ActionResult)result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"删除资产关联失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string AddFunctionEngineer(string functionId, string engineerDataJson)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"AddFunctionEngineer() 开始执行，FunctionID: {functionId}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var engineerData = JsonConvert.DeserializeObject(engineerDataJson);
+            var result = controller.AddFunctionEngineer(functionId, engineerData).Result;
+            var value = GetActionResultValue(result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"添加工程师关联失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string RemoveFunctionEngineer(string functionId, string engineerId)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"RemoveFunctionEngineer() 开始执行，FunctionID: {functionId}, EngineerID: {engineerId}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var result = controller.RemoveFunctionEngineer(functionId, engineerId).Result;
+            var value = GetActionResultValue((Microsoft.AspNetCore.Mvc.ActionResult)result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"删除工程师关联失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string AddFunctionCustomer(string functionId, string customerDataJson)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"AddFunctionCustomer() 开始执行，FunctionID: {functionId}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var customerData = JsonConvert.DeserializeObject(customerDataJson);
+            var result = controller.AddFunctionCustomer(functionId, customerData).Result;
+            var value = GetActionResultValue(result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"添加客户关联失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string RemoveFunctionCustomer(string functionId, string customerId)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"RemoveFunctionCustomer() 开始执行，FunctionID: {functionId}, CustomerID: {customerId}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var result = controller.RemoveFunctionCustomer(functionId, customerId).Result;
+            var value = GetActionResultValue((Microsoft.AspNetCore.Mvc.ActionResult)result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"删除客户关联失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string AddFunctionTask(string functionId, string taskDataJson)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"AddFunctionTask() 开始执行，FunctionID: {functionId}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var taskData = JsonConvert.DeserializeObject(taskDataJson);
+            var result = controller.AddFunctionTask(functionId, taskData).Result;
+            var value = GetActionResultValue(result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"添加任务关联失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
+
+    public string RemoveFunctionTask(string functionId, string taskId)
+    {
+        var logger = FileLogger.Instance;
+        logger.LogInfo($"RemoveFunctionTask() 开始执行，FunctionID: {functionId}, TaskID: {taskId}", "WebViewBridge");
+        try
+        {
+            var controller = new Controllers.ProductsController(_context, GetProductsControllerLogger());
+            var result = controller.RemoveFunctionTask(functionId, taskId).Result;
+            var value = GetActionResultValue((Microsoft.AspNetCore.Mvc.ActionResult)result);
+            return JsonConvert.SerializeObject(value, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"删除任务关联失败: {ex.Message}", ex, "WebViewBridge");
+            return JsonConvert.SerializeObject(new { error = ex.Message }, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            });
+        }
+    }
 }

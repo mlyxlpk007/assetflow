@@ -938,3 +938,349 @@ export const quotesApi = {
     return result;
   },
 };
+
+export const productsApi = {
+  getAll: async () => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('GetProducts');
+      return Array.isArray(result) ? result : [];
+    }
+    return httpRequest('products');
+  },
+  
+  getById: async (id) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('GetProduct', id);
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    return httpRequest(`products/${id}`);
+  },
+  
+  getStructure: async () => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('GetProductsStructure');
+      return Array.isArray(result) ? result : [];
+    }
+    return httpRequest('products/structure');
+  },
+  
+  create: async (data) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('CreateProduct', JSON.stringify(data));
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest('products', { method: 'POST', body: data });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+  
+  update: async (id, data) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('UpdateProduct', id, JSON.stringify(data));
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/${id}`, { method: 'PUT', body: data });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+  
+  delete: async (id) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('DeleteProduct', id);
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/${id}`, { method: 'DELETE' });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+  
+  getVersions: async () => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('GetProductVersions');
+      return Array.isArray(result) ? result : [];
+    }
+    return httpRequest('products/versions');
+  },
+  
+  getAnalytics: async () => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('GetProductAnalytics');
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    return httpRequest('products/analytics');
+  },
+
+  // 模块管理
+  createModule: async (productId, data) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('CreateProductModule', productId, JSON.stringify(data));
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/${productId}/modules`, { method: 'POST', body: data });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  updateModule: async (id, data) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('UpdateProductModule', id, JSON.stringify(data));
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/modules/${id}`, { method: 'PUT', body: data });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  deleteModule: async (id) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('DeleteProductModule', id);
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/modules/${id}`, { method: 'DELETE' });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  // 子模块管理
+  createSubModule: async (moduleId, data) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('CreateProductSubModule', moduleId, JSON.stringify(data));
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/modules/${moduleId}/submodules`, { method: 'POST', body: data });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  updateSubModule: async (id, data) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('UpdateProductSubModule', id, JSON.stringify(data));
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/submodules/${id}`, { method: 'PUT', body: data });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  deleteSubModule: async (id) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('DeleteProductSubModule', id);
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/submodules/${id}`, { method: 'DELETE' });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  // 功能管理
+  createFunction: async (subModuleId, data) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('CreateProductFunction', subModuleId, JSON.stringify(data));
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/submodules/${subModuleId}/functions`, { method: 'POST', body: data });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  updateFunction: async (id, data) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('UpdateProductFunction', id, JSON.stringify(data));
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/functions/${id}`, { method: 'PUT', body: data });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  deleteFunction: async (id) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('DeleteProductFunction', id);
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/functions/${id}`, { method: 'DELETE' });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  // 功能关联管理
+  addFunctionAsset: async (functionId, data) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('AddFunctionAsset', functionId, JSON.stringify(data));
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/functions/${functionId}/assets`, { method: 'POST', body: data });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  removeFunctionAsset: async (functionId, assetId) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('RemoveFunctionAsset', functionId, assetId);
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/functions/${functionId}/assets/${assetId}`, { method: 'DELETE' });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  addFunctionEngineer: async (functionId, data) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('AddFunctionEngineer', functionId, JSON.stringify(data));
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/functions/${functionId}/engineers`, { method: 'POST', body: data });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  removeFunctionEngineer: async (functionId, engineerId) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('RemoveFunctionEngineer', functionId, engineerId);
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/functions/${functionId}/engineers/${engineerId}`, { method: 'DELETE' });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  addFunctionCustomer: async (functionId, data) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('AddFunctionCustomer', functionId, JSON.stringify(data));
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/functions/${functionId}/customers`, { method: 'POST', body: data });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  removeFunctionCustomer: async (functionId, customerId) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('RemoveFunctionCustomer', functionId, customerId);
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/functions/${functionId}/customers/${customerId}`, { method: 'DELETE' });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  addFunctionTask: async (functionId, data) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('AddFunctionTask', functionId, JSON.stringify(data));
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/functions/${functionId}/tasks`, { method: 'POST', body: data });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+
+  removeFunctionTask: async (functionId, taskId) => {
+    if (useNativeBridge) {
+      const result = await nativeRequest('RemoveFunctionTask', functionId, taskId);
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+      return typeof result === 'string' ? JSON.parse(result) : result;
+    }
+    const result = await httpRequest(`products/functions/${functionId}/tasks/${taskId}`, { method: 'DELETE' });
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  },
+};

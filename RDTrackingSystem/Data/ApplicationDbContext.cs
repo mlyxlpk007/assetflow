@@ -22,6 +22,15 @@ public class ApplicationDbContext : DbContext
     public DbSet<AssetProjectRelation> AssetProjectRelations { get; set; } = null!;
     public DbSet<AssetHealthMetrics> AssetHealthMetrics { get; set; } = null!;
     public DbSet<ManagementQuote> ManagementQuotes { get; set; } = null!;
+    public DbSet<Product> Products { get; set; } = null!;
+    public DbSet<ProductModule> ProductModules { get; set; } = null!;
+    public DbSet<ProductSubModule> ProductSubModules { get; set; } = null!;
+    public DbSet<ProductFunction> ProductFunctions { get; set; } = null!;
+    public DbSet<ProductFunctionAsset> ProductFunctionAssets { get; set; } = null!;
+    public DbSet<ProductFunctionEngineer> ProductFunctionEngineers { get; set; } = null!;
+    public DbSet<ProductFunctionCustomer> ProductFunctionCustomers { get; set; } = null!;
+    public DbSet<ProductFunctionTask> ProductFunctionTasks { get; set; } = null!;
+    public DbSet<ProductVersion> ProductVersions { get; set; } = null!;
 
     // 用于依赖注入的构造函数
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
@@ -245,6 +254,155 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.DisplayCount).HasDefaultValue(0);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("datetime('now')");
+        });
+        
+        // ========== Product 表配置 ==========
+        modelBuilder.Entity<Product>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Code).IsUnique().HasDatabaseName("IX_Products_Code");
+            entity.HasIndex(e => e.Status).HasDatabaseName("IX_Products_Status");
+            entity.Property(e => e.Id).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Code).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("active");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("datetime('now')");
+        });
+        
+        // ========== ProductModule 表配置 ==========
+        modelBuilder.Entity<ProductModule>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(pm => pm.Product)
+                  .WithMany(p => p.Modules)
+                  .HasForeignKey(pm => pm.ProductId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("FK_ProductModules_Products");
+            entity.HasIndex(e => e.ProductId).HasDatabaseName("IX_ProductModules_ProductId");
+            entity.HasIndex(e => e.Type).HasDatabaseName("IX_ProductModules_Type");
+            entity.Property(e => e.Id).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ProductId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Type).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+        });
+        
+        // ========== ProductSubModule 表配置 ==========
+        modelBuilder.Entity<ProductSubModule>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(psm => psm.Module)
+                  .WithMany(pm => pm.SubModules)
+                  .HasForeignKey(psm => psm.ModuleId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("FK_ProductSubModules_ProductModules");
+            entity.HasIndex(e => e.ModuleId).HasDatabaseName("IX_ProductSubModules_ModuleId");
+            entity.Property(e => e.Id).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ModuleId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+        });
+        
+        // ========== ProductFunction 表配置 ==========
+        modelBuilder.Entity<ProductFunction>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(pf => pf.SubModule)
+                  .WithMany(psm => psm.Functions)
+                  .HasForeignKey(pf => pf.SubModuleId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("FK_ProductFunctions_ProductSubModules");
+            entity.HasIndex(e => e.SubModuleId).HasDatabaseName("IX_ProductFunctions_SubModuleId");
+            entity.Property(e => e.Id).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.SubModuleId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+        });
+        
+        // ========== ProductFunctionAsset 表配置 ==========
+        modelBuilder.Entity<ProductFunctionAsset>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(pfa => pfa.Function)
+                  .WithMany(pf => pf.Assets)
+                  .HasForeignKey(pfa => pfa.FunctionId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("FK_ProductFunctionAssets_ProductFunctions");
+            entity.HasIndex(e => e.FunctionId).HasDatabaseName("IX_ProductFunctionAssets_FunctionId");
+            entity.HasIndex(e => e.AssetId).HasDatabaseName("IX_ProductFunctionAssets_AssetId");
+            entity.Property(e => e.Id).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.FunctionId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.AssetId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+        });
+        
+        // ========== ProductFunctionEngineer 表配置 ==========
+        modelBuilder.Entity<ProductFunctionEngineer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(pfe => pfe.Function)
+                  .WithMany(pf => pf.Engineers)
+                  .HasForeignKey(pfe => pfe.FunctionId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("FK_ProductFunctionEngineers_ProductFunctions");
+            entity.HasIndex(e => e.FunctionId).HasDatabaseName("IX_ProductFunctionEngineers_FunctionId");
+            entity.HasIndex(e => e.EngineerId).HasDatabaseName("IX_ProductFunctionEngineers_EngineerId");
+            entity.Property(e => e.Id).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.FunctionId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.EngineerId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+        });
+        
+        // ========== ProductFunctionCustomer 表配置 ==========
+        modelBuilder.Entity<ProductFunctionCustomer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(pfc => pfc.Function)
+                  .WithMany(pf => pf.Customers)
+                  .HasForeignKey(pfc => pfc.FunctionId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("FK_ProductFunctionCustomers_ProductFunctions");
+            entity.HasIndex(e => e.FunctionId).HasDatabaseName("IX_ProductFunctionCustomers_FunctionId");
+            entity.Property(e => e.Id).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.FunctionId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.CustomerName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+        });
+        
+        // ========== ProductFunctionTask 表配置 ==========
+        modelBuilder.Entity<ProductFunctionTask>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(pft => pft.Function)
+                  .WithMany(pf => pf.Tasks)
+                  .HasForeignKey(pft => pft.FunctionId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("FK_ProductFunctionTasks_ProductFunctions");
+            entity.HasIndex(e => e.FunctionId).HasDatabaseName("IX_ProductFunctionTasks_FunctionId");
+            entity.HasIndex(e => e.TaskId).HasDatabaseName("IX_ProductFunctionTasks_TaskId");
+            entity.Property(e => e.Id).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.FunctionId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.TaskId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+        });
+        
+        // ========== ProductVersion 表配置 ==========
+        modelBuilder.Entity<ProductVersion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(pv => pv.Product)
+                  .WithMany(p => p.Versions)
+                  .HasForeignKey(pv => pv.ProductId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("FK_ProductVersions_Products");
+            entity.HasIndex(e => e.ProductId).HasDatabaseName("IX_ProductVersions_ProductId");
+            entity.HasIndex(e => e.Status).HasDatabaseName("IX_ProductVersions_Status");
+            entity.Property(e => e.Id).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ProductId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Version).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("draft");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
         });
     }
 

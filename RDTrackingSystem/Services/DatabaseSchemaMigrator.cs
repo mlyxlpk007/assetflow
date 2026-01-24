@@ -61,6 +61,17 @@ public static class DatabaseSchemaMigrator
                 // 创建名言表（如果不存在）
                 CreateManagementQuotesTableIfNotExists(connection, logger);
                 
+                // 创建产品相关表（如果不存在）
+                CreateProductsTableIfNotExists(connection, logger);
+                CreateProductModulesTableIfNotExists(connection, logger);
+                CreateProductSubModulesTableIfNotExists(connection, logger);
+                CreateProductFunctionsTableIfNotExists(connection, logger);
+                CreateProductFunctionAssetsTableIfNotExists(connection, logger);
+                CreateProductFunctionEngineersTableIfNotExists(connection, logger);
+                CreateProductFunctionCustomersTableIfNotExists(connection, logger);
+                CreateProductFunctionTasksTableIfNotExists(connection, logger);
+                CreateProductVersionsTableIfNotExists(connection, logger);
+                
                 logger.LogInfo("数据库架构迁移完成", "DatabaseSchemaMigrator");
             }
         }
@@ -603,6 +614,315 @@ public static class DatabaseSchemaMigrator
         catch (Exception ex)
         {
             logger.LogError($"创建 ManagementQuotes 表失败: {ex.Message}", ex, "DatabaseSchemaMigrator");
+        }
+    }
+    
+    private static void CreateProductsTableIfNotExists(SqliteConnection connection, FileLogger logger)
+    {
+        try
+        {
+            if (TableExists(connection, "Products"))
+            {
+                logger.LogInfo("Products 表已存在，跳过创建", "DatabaseSchemaMigrator");
+                return;
+            }
+            
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                CREATE TABLE IF NOT EXISTS [Products] (
+                    [Id] TEXT NOT NULL PRIMARY KEY,
+                    [Name] TEXT NOT NULL,
+                    [Code] TEXT NOT NULL,
+                    [Description] TEXT,
+                    [CurrentVersion] TEXT,
+                    [Status] TEXT NOT NULL DEFAULT 'active',
+                    [CreatedAt] TEXT NOT NULL DEFAULT (datetime('now')),
+                    [UpdatedAt] TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+                
+                CREATE UNIQUE INDEX IF NOT EXISTS [IX_Products_Code] ON [Products]([Code]);
+                CREATE INDEX IF NOT EXISTS [IX_Products_Status] ON [Products]([Status]);
+            ";
+            
+            command.ExecuteNonQuery();
+            logger.LogInfo("Products 表创建成功", "DatabaseSchemaMigrator");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"创建 Products 表失败: {ex.Message}", ex, "DatabaseSchemaMigrator");
+        }
+    }
+    
+    private static void CreateProductModulesTableIfNotExists(SqliteConnection connection, FileLogger logger)
+    {
+        try
+        {
+            if (TableExists(connection, "ProductModules"))
+            {
+                logger.LogInfo("ProductModules 表已存在，跳过创建", "DatabaseSchemaMigrator");
+                return;
+            }
+            
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                CREATE TABLE IF NOT EXISTS [ProductModules] (
+                    [Id] TEXT NOT NULL PRIMARY KEY,
+                    [ProductId] TEXT NOT NULL,
+                    [Name] TEXT NOT NULL,
+                    [Type] TEXT NOT NULL,
+                    [Description] TEXT,
+                    [OrderIndex] INTEGER NOT NULL DEFAULT 0,
+                    [CreatedAt] TEXT NOT NULL DEFAULT (datetime('now')),
+                    FOREIGN KEY([ProductId]) REFERENCES [Products]([Id]) ON DELETE CASCADE
+                );
+                
+                CREATE INDEX IF NOT EXISTS [IX_ProductModules_ProductId] ON [ProductModules]([ProductId]);
+                CREATE INDEX IF NOT EXISTS [IX_ProductModules_Type] ON [ProductModules]([Type]);
+            ";
+            
+            command.ExecuteNonQuery();
+            logger.LogInfo("ProductModules 表创建成功", "DatabaseSchemaMigrator");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"创建 ProductModules 表失败: {ex.Message}", ex, "DatabaseSchemaMigrator");
+        }
+    }
+    
+    private static void CreateProductSubModulesTableIfNotExists(SqliteConnection connection, FileLogger logger)
+    {
+        try
+        {
+            if (TableExists(connection, "ProductSubModules"))
+            {
+                logger.LogInfo("ProductSubModules 表已存在，跳过创建", "DatabaseSchemaMigrator");
+                return;
+            }
+            
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                CREATE TABLE IF NOT EXISTS [ProductSubModules] (
+                    [Id] TEXT NOT NULL PRIMARY KEY,
+                    [ModuleId] TEXT NOT NULL,
+                    [Name] TEXT NOT NULL,
+                    [Description] TEXT,
+                    [OrderIndex] INTEGER NOT NULL DEFAULT 0,
+                    [CreatedAt] TEXT NOT NULL DEFAULT (datetime('now')),
+                    FOREIGN KEY([ModuleId]) REFERENCES [ProductModules]([Id]) ON DELETE CASCADE
+                );
+                
+                CREATE INDEX IF NOT EXISTS [IX_ProductSubModules_ModuleId] ON [ProductSubModules]([ModuleId]);
+            ";
+            
+            command.ExecuteNonQuery();
+            logger.LogInfo("ProductSubModules 表创建成功", "DatabaseSchemaMigrator");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"创建 ProductSubModules 表失败: {ex.Message}", ex, "DatabaseSchemaMigrator");
+        }
+    }
+    
+    private static void CreateProductFunctionsTableIfNotExists(SqliteConnection connection, FileLogger logger)
+    {
+        try
+        {
+            if (TableExists(connection, "ProductFunctions"))
+            {
+                logger.LogInfo("ProductFunctions 表已存在，跳过创建", "DatabaseSchemaMigrator");
+                return;
+            }
+            
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                CREATE TABLE IF NOT EXISTS [ProductFunctions] (
+                    [Id] TEXT NOT NULL PRIMARY KEY,
+                    [SubModuleId] TEXT NOT NULL,
+                    [Name] TEXT NOT NULL,
+                    [Description] TEXT,
+                    [OrderIndex] INTEGER NOT NULL DEFAULT 0,
+                    [CreatedAt] TEXT NOT NULL DEFAULT (datetime('now')),
+                    FOREIGN KEY([SubModuleId]) REFERENCES [ProductSubModules]([Id]) ON DELETE CASCADE
+                );
+                
+                CREATE INDEX IF NOT EXISTS [IX_ProductFunctions_SubModuleId] ON [ProductFunctions]([SubModuleId]);
+            ";
+            
+            command.ExecuteNonQuery();
+            logger.LogInfo("ProductFunctions 表创建成功", "DatabaseSchemaMigrator");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"创建 ProductFunctions 表失败: {ex.Message}", ex, "DatabaseSchemaMigrator");
+        }
+    }
+    
+    private static void CreateProductFunctionAssetsTableIfNotExists(SqliteConnection connection, FileLogger logger)
+    {
+        try
+        {
+            if (TableExists(connection, "ProductFunctionAssets"))
+            {
+                logger.LogInfo("ProductFunctionAssets 表已存在，跳过创建", "DatabaseSchemaMigrator");
+                return;
+            }
+            
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                CREATE TABLE IF NOT EXISTS [ProductFunctionAssets] (
+                    [Id] TEXT NOT NULL PRIMARY KEY,
+                    [FunctionId] TEXT NOT NULL,
+                    [AssetId] TEXT NOT NULL,
+                    [AssetVersion] TEXT,
+                    [CreatedAt] TEXT NOT NULL DEFAULT (datetime('now')),
+                    FOREIGN KEY([FunctionId]) REFERENCES [ProductFunctions]([Id]) ON DELETE CASCADE
+                );
+                
+                CREATE INDEX IF NOT EXISTS [IX_ProductFunctionAssets_FunctionId] ON [ProductFunctionAssets]([FunctionId]);
+                CREATE INDEX IF NOT EXISTS [IX_ProductFunctionAssets_AssetId] ON [ProductFunctionAssets]([AssetId]);
+            ";
+            
+            command.ExecuteNonQuery();
+            logger.LogInfo("ProductFunctionAssets 表创建成功", "DatabaseSchemaMigrator");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"创建 ProductFunctionAssets 表失败: {ex.Message}", ex, "DatabaseSchemaMigrator");
+        }
+    }
+    
+    private static void CreateProductFunctionEngineersTableIfNotExists(SqliteConnection connection, FileLogger logger)
+    {
+        try
+        {
+            if (TableExists(connection, "ProductFunctionEngineers"))
+            {
+                logger.LogInfo("ProductFunctionEngineers 表已存在，跳过创建", "DatabaseSchemaMigrator");
+                return;
+            }
+            
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                CREATE TABLE IF NOT EXISTS [ProductFunctionEngineers] (
+                    [Id] TEXT NOT NULL PRIMARY KEY,
+                    [FunctionId] TEXT NOT NULL,
+                    [EngineerId] TEXT NOT NULL,
+                    [CreatedAt] TEXT NOT NULL DEFAULT (datetime('now')),
+                    FOREIGN KEY([FunctionId]) REFERENCES [ProductFunctions]([Id]) ON DELETE CASCADE
+                );
+                
+                CREATE INDEX IF NOT EXISTS [IX_ProductFunctionEngineers_FunctionId] ON [ProductFunctionEngineers]([FunctionId]);
+                CREATE INDEX IF NOT EXISTS [IX_ProductFunctionEngineers_EngineerId] ON [ProductFunctionEngineers]([EngineerId]);
+            ";
+            
+            command.ExecuteNonQuery();
+            logger.LogInfo("ProductFunctionEngineers 表创建成功", "DatabaseSchemaMigrator");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"创建 ProductFunctionEngineers 表失败: {ex.Message}", ex, "DatabaseSchemaMigrator");
+        }
+    }
+    
+    private static void CreateProductFunctionCustomersTableIfNotExists(SqliteConnection connection, FileLogger logger)
+    {
+        try
+        {
+            if (TableExists(connection, "ProductFunctionCustomers"))
+            {
+                logger.LogInfo("ProductFunctionCustomers 表已存在，跳过创建", "DatabaseSchemaMigrator");
+                return;
+            }
+            
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                CREATE TABLE IF NOT EXISTS [ProductFunctionCustomers] (
+                    [Id] TEXT NOT NULL PRIMARY KEY,
+                    [FunctionId] TEXT NOT NULL,
+                    [CustomerName] TEXT NOT NULL,
+                    [Region] TEXT,
+                    [CreatedAt] TEXT NOT NULL DEFAULT (datetime('now')),
+                    FOREIGN KEY([FunctionId]) REFERENCES [ProductFunctions]([Id]) ON DELETE CASCADE
+                );
+                
+                CREATE INDEX IF NOT EXISTS [IX_ProductFunctionCustomers_FunctionId] ON [ProductFunctionCustomers]([FunctionId]);
+            ";
+            
+            command.ExecuteNonQuery();
+            logger.LogInfo("ProductFunctionCustomers 表创建成功", "DatabaseSchemaMigrator");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"创建 ProductFunctionCustomers 表失败: {ex.Message}", ex, "DatabaseSchemaMigrator");
+        }
+    }
+    
+    private static void CreateProductFunctionTasksTableIfNotExists(SqliteConnection connection, FileLogger logger)
+    {
+        try
+        {
+            if (TableExists(connection, "ProductFunctionTasks"))
+            {
+                logger.LogInfo("ProductFunctionTasks 表已存在，跳过创建", "DatabaseSchemaMigrator");
+                return;
+            }
+            
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                CREATE TABLE IF NOT EXISTS [ProductFunctionTasks] (
+                    [Id] TEXT NOT NULL PRIMARY KEY,
+                    [FunctionId] TEXT NOT NULL,
+                    [TaskId] TEXT NOT NULL,
+                    [CreatedAt] TEXT NOT NULL DEFAULT (datetime('now')),
+                    FOREIGN KEY([FunctionId]) REFERENCES [ProductFunctions]([Id]) ON DELETE CASCADE
+                );
+                
+                CREATE INDEX IF NOT EXISTS [IX_ProductFunctionTasks_FunctionId] ON [ProductFunctionTasks]([FunctionId]);
+                CREATE INDEX IF NOT EXISTS [IX_ProductFunctionTasks_TaskId] ON [ProductFunctionTasks]([TaskId]);
+            ";
+            
+            command.ExecuteNonQuery();
+            logger.LogInfo("ProductFunctionTasks 表创建成功", "DatabaseSchemaMigrator");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"创建 ProductFunctionTasks 表失败: {ex.Message}", ex, "DatabaseSchemaMigrator");
+        }
+    }
+    
+    private static void CreateProductVersionsTableIfNotExists(SqliteConnection connection, FileLogger logger)
+    {
+        try
+        {
+            if (TableExists(connection, "ProductVersions"))
+            {
+                logger.LogInfo("ProductVersions 表已存在，跳过创建", "DatabaseSchemaMigrator");
+                return;
+            }
+            
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                CREATE TABLE IF NOT EXISTS [ProductVersions] (
+                    [Id] TEXT NOT NULL PRIMARY KEY,
+                    [ProductId] TEXT NOT NULL,
+                    [Version] TEXT NOT NULL,
+                    [Description] TEXT,
+                    [Status] TEXT NOT NULL DEFAULT 'draft',
+                    [ReleaseDate] TEXT,
+                    [CreatedAt] TEXT NOT NULL DEFAULT (datetime('now')),
+                    FOREIGN KEY([ProductId]) REFERENCES [Products]([Id]) ON DELETE CASCADE
+                );
+                
+                CREATE INDEX IF NOT EXISTS [IX_ProductVersions_ProductId] ON [ProductVersions]([ProductId]);
+                CREATE INDEX IF NOT EXISTS [IX_ProductVersions_Status] ON [ProductVersions]([Status]);
+            ";
+            
+            command.ExecuteNonQuery();
+            logger.LogInfo("ProductVersions 表创建成功", "DatabaseSchemaMigrator");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"创建 ProductVersions 表失败: {ex.Message}", ex, "DatabaseSchemaMigrator");
         }
     }
 }

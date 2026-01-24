@@ -14,6 +14,12 @@ import AssetManagement from '@/pages/AssetManagement';
 import AssetRegister from '@/pages/AssetRegister';
 import AssetEvolution from '@/pages/AssetEvolution';
 import AssetHealthDashboard from '@/pages/AssetHealthDashboard';
+import ProductManagement from '@/pages/ProductManagement';
+import ProductStructure from '@/pages/ProductStructure';
+import ProductCatalog from '@/pages/ProductCatalog';
+import ProductEdit from '@/pages/ProductEdit';
+import ProductVersions from '@/pages/ProductVersions';
+import ProductAnalytics from '@/pages/ProductAnalytics';
 import Quotes from '@/pages/Quotes';
 import DataManagement from '@/pages/DataManagement';
 import TestData from '@/pages/TestData';
@@ -21,17 +27,19 @@ import Sidebar from '@/components/Sidebar';
 import ManagementPhilosophy from '@/components/ManagementPhilosophy';
 import { useDataInitializer } from '@/hooks/useDataInitializer';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { I18nProvider, useI18n } from '@/i18n/I18nContext';
 
-function App() {
+function AppContent() {
   useDataInitializer();
+  const { t } = useI18n();
 
   return (
     <>
       <Helmet>
-        <title>研发订单跟踪系统 - 智能仪表盘</title>
-        <meta name="description" content="一个美观、高效的研发订单跟踪系统，以仪表盘和时间轴的形式清晰展示项目进度。" />
-        <meta property="og:title" content="研发订单跟踪系统 - 智能仪表盘" />
-        <meta property="og:description" content="一个美观、高效的研发订单跟踪系统，以仪表盘和时间轴的形式清晰展示项目进度。" />
+        <title>{t('dashboard.title')} - R&D Tracking System</title>
+        <meta name="description" content="A beautiful and efficient R&D order tracking system that clearly displays project progress in dashboard and timeline formats." />
+        <meta property="og:title" content={`${t('dashboard.title')} - R&D Tracking System`} />
+        <meta property="og:description" content="A beautiful and efficient R&D order tracking system that clearly displays project progress in dashboard and timeline formats." />
       </Helmet>
       
       <div className="h-screen bg-gray-900 text-gray-100 overflow-hidden">
@@ -55,6 +63,12 @@ function App() {
                                 <Route path="/assets/register" element={<AssetRegister />} />
                                 <Route path="/assets/evolution" element={<AssetEvolution />} />
                                 <Route path="/assets/health" element={<AssetHealthDashboard />} />
+                                <Route path="/products" element={<ProductManagement />} />
+                                <Route path="/products/structure" element={<ProductStructure />} />
+                                <Route path="/products/catalog" element={<ProductCatalog />} />
+                                <Route path="/products/edit/:id" element={<ProductEdit />} />
+                                <Route path="/products/versions" element={<ProductVersions />} />
+                                <Route path="/products/analytics" element={<ProductAnalytics />} />
                                 <Route path="/quotes" element={<Quotes />} />
                                 <Route path="/data-management" element={<DataManagement />} />
                                 <Route path="/test-data" element={<TestData />} />
@@ -67,6 +81,14 @@ function App() {
         <Toaster />
       </div>
     </>
+  );
+}
+
+function App() {
+  return (
+    <I18nProvider>
+      <AppContent />
+    </I18nProvider>
   );
 }
 
