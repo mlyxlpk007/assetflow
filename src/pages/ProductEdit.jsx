@@ -330,7 +330,11 @@ const ProductEdit = () => {
         {/* 页面标题 */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/products/catalog')}>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/products/catalog')}
+              className="border-gray-600 hover:bg-gray-700 text-white"
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               {t('common.back')}
             </Button>
